@@ -10,6 +10,7 @@ from api.v1.models.engagement import (
 	NotificationPref,
 	TopicCard,
 )
+from api.v1.models.push import PushSub, PushSubscription
 from api.v1.models.question import Question
 from api.v1.models.user import User
 
@@ -24,6 +25,8 @@ __all__ = [
 	"GameSession",
 	"NotificationPref",
 	"TopicCard",
+	"PushSubscription",
+	"PushSub",
 	"Question",
 	"User",
 ]

@@ -10,3 +10,19 @@ class CoupleResponse(BaseModel):
     id: UUID
     invite_code: str
     created_at: datetime
+
+
+class PartnerInfo(BaseModel):
+    id: UUID
+    name: str
+    email: str
+
+
+class CoupleProfileResponse(BaseModel):
+    couple_id: UUID
+    invite_code: str
+    created_at: datetime
+    me: PartnerInfo
+    partner: PartnerInfo | None = None
+    streak: int
+    days_together: int

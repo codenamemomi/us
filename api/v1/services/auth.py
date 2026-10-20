@@ -16,8 +16,9 @@ from api.v1.services.errors import (
 
 
 def register_user(db: Session, request: RegisterRequest) -> tuple[User, Couple]:
+    invite_code = request.invite_code.strip().upper()
     couple = db.scalar(
-        select(Couple).where(Couple.invite_code == request.invite_code)
+        select(Couple).where(Couple.invite_code == invite_code)
     )
     if couple is None:
         raise InvalidInviteCodeError()
@@ -30,12 +31,12 @@ def register_user(db: Session, request: RegisterRequest) -> tuple[User, Couple]:
     if member_count >= 2:
         raise CoupleFullError()
 
-    email = request.email.lower()
+    email = str(request.email).strip().lower()
     if db.scalar(select(User).where(User.email == email)) is not None:
         raise EmailAlreadyRegisteredError()
 
     user = User(
-        name=request.name,
+        name=request.name.strip(),
         email=email,
         password_hash=hash_password(request.password),
     )
@@ -54,7 +55,7 @@ def register_user(db: Session, request: RegisterRequest) -> tuple[User, Couple]:
 
 
 def authenticate_user(db: Session, request: LoginRequest) -> User:
-    email = request.email.lower()
+    email = str(request.email).strip().lower()
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(request.password, user.password_hash):
         raise InvalidCredentialsError()
