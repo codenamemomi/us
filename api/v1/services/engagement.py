@@ -59,6 +59,7 @@ def create_bored_ping(db: Session, user: User) -> BoredPing:
                     body=f"{user.name} is bored 👀 · Tap to join",
                     url="/",
                     urgency="high",
+                    tag="bored",
                 )
                 if push_count == 0:
                     email_enabled = pref.email_on_bored if pref else True

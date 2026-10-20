@@ -54,6 +54,7 @@ def send_push(
     body: str,
     url: str = "/",
     urgency: str = "normal",
+    tag: str = "us-general",
 ) -> int:
     """Sends Web Push to all active push subscriptions for user_id.
 
@@ -80,7 +81,7 @@ def send_push(
     delivered = 0
     to_delete = []
 
-    payload = json.dumps({"title": title, "body": body, "url": url})
+    payload = json.dumps({"title": title, "body": body, "url": url, "tag": tag})
     headers = {"Urgency": urgency}
 
     for sub in subs:

@@ -42,6 +42,7 @@ async def post_answer(
                 body=f"{user.name} answered today's question",
                 url="/",
                 urgency="normal",
+                tag="answer",
             )
         return serialize_daily_prompt(prompt, user)
     except ValueError as e:
