@@ -119,7 +119,7 @@ def main() -> int:
         print("\nClearing tables...")
         deleted_summary: list[tuple[str, int]] = []
 
-        with db.begin():
+        try:
             for table in reversed(Base.metadata.sorted_tables):
                 if args.keep_questions and table.name == "questions":
                     continue
@@ -127,6 +127,10 @@ def main() -> int:
                 deleted_rows = result.rowcount if result.rowcount is not None and result.rowcount >= 0 else 0
                 deleted_summary.append((table.name, deleted_rows))
                 print(f"  ✓ Cleared {table.name:<20} ({deleted_rows} rows removed)")
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
         print("-" * 60)
         total_deleted = sum(cnt for _, cnt in deleted_summary)
