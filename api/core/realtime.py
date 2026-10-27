@@ -9,6 +9,13 @@ class Hub:
     def __init__(self) -> None:
         self.subs: dict[str, set[asyncio.Queue]] = defaultdict(set)
         self.last_seen: dict[str, float] = {}
+        self.tasks: set[asyncio.Task] = set()
+
+    def spawn(self, coro) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        return task
 
     async def publish(self, user_id: str | UUID | None, event: dict) -> None:
         if not user_id:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import Date, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from api.db.base import BaseModel
@@ -21,6 +21,7 @@ class Couple(BaseModel):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    anniversary_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     members: Mapped[list[CoupleMember]] = relationship(
         back_populates="couple", cascade="all, delete-orphan"

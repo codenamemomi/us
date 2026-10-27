@@ -144,7 +144,7 @@ async def post_game(payload: GameRequest, db: DatabaseSession, user: CurrentUser
                 "started_by": str(user.id),
             },
         )
-    await hub.publish(pid, {"type": "game_updated", "game_id": str(sess.id)})
+    await hub.publish(pid, {"type": "game_updated", "game_id": str(sess.id), "status": sess.status})
     engine = REGISTRY.get(sess.game_type)
     state_view = engine.view_for(sess.state, user.id) if engine else sess.state
     return {"id": sess.id, "game_type": sess.game_type, "state": state_view, "status": sess.status, "is_new": is_new}
@@ -166,7 +166,9 @@ async def post_game_move(game_id: UUID, move: dict, db: DatabaseSession, user: C
     try:
         sess, state_view = move_game(db, user, game_id, move)
         pid = partner_id_for(db, user.id)
-        await hub.publish(pid, {"type": "game_updated", "game_id": str(sess.id)})
+        update_event = {"type": "game_updated", "game_id": str(sess.id), "status": sess.status}
+        await hub.publish(pid, update_event)
+        await hub.publish(user.id, update_event)
         return {"id": sess.id, "game_type": sess.game_type, "state": state_view, "status": sess.status}
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
@@ -246,7 +248,7 @@ async def get_stream(request: Request, db: DatabaseSession, token: str | None = 
                             hub.last_seen.pop(uid, None)
                             await hub.publish(partner_id, {"type": "presence_changed", "partner_online": False})
 
-                    asyncio.create_task(notify_offline_after_grace(str(user.id), pid))
+                    hub.spawn(notify_offline_after_grace(str(user.id), pid))
 
     return StreamingResponse(
         event_generator(),

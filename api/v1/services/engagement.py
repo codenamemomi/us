@@ -113,19 +113,34 @@ def partner_id_for(db: Session, user_id: UUID) -> UUID | None:
     return member.user_id if member else None
 
 
-def get_active_game(db: Session, user: User) -> GameSession | None:
+def get_active_game(db: Session, user: User, game_type: str | None = None) -> GameSession | None:
+    from api.v1.games import REGISTRY
+
     couple_id = couple_id_for(db, user.id)
-    return (
-        db.query(GameSession)
-        .filter(GameSession.couple_id == couple_id, GameSession.status == "active")
-        .order_by(GameSession.created_at.desc())
-        .first()
+    q = db.query(GameSession).filter(
+        GameSession.couple_id == couple_id,
+        GameSession.status == "active",
     )
+    if game_type is not None:
+        q = q.filter(GameSession.game_type == game_type)
+    sessions = q.order_by(GameSession.created_at.desc()).all()
+    # Skip sessions with empty / invalid state or that are already finished
+    for sess in sessions:
+        if sess.state and sess.state.get("rounds"):
+            engine = REGISTRY.get(sess.game_type)
+            if engine and engine.is_done(sess.state):
+                sess.status = "done"
+                continue
+            return sess
+        # Mark empty-state sessions as cancelled so they stop blocking future games
+        sess.status = "cancelled"
+    db.commit()
+    return None
 
 
 def create_or_join_game(db: Session, user: User, game_type: str) -> tuple[GameSession, bool]:
-    """Returns (session, is_new). If an active session exists for this couple, reuses it!"""
-    active = get_active_game(db, user)
+    """Returns (session, is_new). If a valid active session for this game_type exists, reuses it."""
+    active = get_active_game(db, user, game_type=game_type)
     if active is not None:
         return active, False
 

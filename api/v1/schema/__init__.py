@@ -5,7 +5,12 @@ from api.v1.schema.auth import (
 	TokenResponse,
 	UserResponse,
 )
-from api.v1.schema.couple import CoupleProfileResponse, CoupleResponse, PartnerInfo
+from api.v1.schema.couple import (
+	CoupleProfileResponse,
+	CoupleResponse,
+	PartnerInfo,
+	UpdateAnniversaryRequest,
+)
 from api.v1.schema.daily_prompt import AnswerPromptRequest, DailyPromptResponse, QuestionOut
 
 __all__ = [
@@ -19,6 +24,7 @@ __all__ = [
 	"RegisterRequest",
 	"RegisterResponse",
 	"TokenResponse",
+	"UpdateAnniversaryRequest",
 	"UserResponse",
 ]
 

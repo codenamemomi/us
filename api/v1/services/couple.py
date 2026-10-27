@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import secrets
 import string
 from uuid import UUID
@@ -65,13 +65,15 @@ def get_couple_profile(db: Session, user: User) -> CoupleProfileResponse:
     partner_member = next((m for m in members if m.user_id != user.id), None)
     partner_user = db.get(User, partner_member.user_id) if partner_member else None
 
-    days_together = max(1, (datetime.now(timezone.utc).date() - couple.created_at.date()).days + 1)
+    start_date = couple.anniversary_date if couple.anniversary_date else couple.created_at.date()
+    days_together = max(1, (datetime.now(timezone.utc).date() - start_date).days + 1)
     streak = calculate_streak(db, couple_id)
 
     return CoupleProfileResponse(
         couple_id=couple.id,
         invite_code=couple.invite_code,
         created_at=couple.created_at,
+        anniversary_date=couple.anniversary_date,
         me=PartnerInfo(id=user.id, name=user.name, email=user.email),
         partner=PartnerInfo(id=partner_user.id, name=partner_user.name, email=partner_user.email)
         if partner_user
@@ -79,3 +81,21 @@ def get_couple_profile(db: Session, user: User) -> CoupleProfileResponse:
         streak=streak,
         days_together=days_together,
     )
+
+
+def update_anniversary_date(
+    db: Session, user: User, anniversary_date: date | None
+) -> CoupleProfileResponse:
+    from api.v1.services.engagement import couple_id_for
+
+    couple_id = couple_id_for(db, user.id)
+    couple = db.get(Couple, couple_id)
+    if couple is None:
+        raise ValueError("Couple not found")
+
+    couple.anniversary_date = anniversary_date
+    db.add(couple)
+    db.commit()
+    db.refresh(couple)
+
+    return get_couple_profile(db, user)

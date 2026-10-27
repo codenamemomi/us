@@ -1,5 +1,4 @@
 from __future__ import annotations
-import random
 import re
 from typing import Any
 from uuid import UUID
@@ -11,49 +10,21 @@ from api.v1.models.question import Question
 
 
 def parse_wyr_options(text: str) -> tuple[str, str]:
-    t = text.strip().rstrip("?")
-    cleaned = re.sub(r"^[Ww]ould you rather\s+", "", t)
-    parts = re.split(r",\s*or\s+|\s+or\s+", cleaned, maxsplit=1)
+    t = text.strip()
+    # Remove leading 'Would you rather' (case-insensitive, handles optional colons/dashes/spaces)
+    cleaned = re.sub(r"^[Ww]ould you rather[:,\s\-]*", "", t, flags=re.IGNORECASE).strip()
+    # Remove trailing question marks or punctuation
+    cleaned = cleaned.rstrip("?!. ")
+
+    # Split on the word 'or' (case-insensitive, handles optional comma before 'or')
+    parts = re.split(r",?\s*\bor\b\s*", cleaned, maxsplit=1, flags=re.IGNORECASE)
     if len(parts) >= 2 and parts[0].strip() and parts[1].strip():
-        # Capitalize first letter of each option
-        opt_a = parts[0].strip()
-        opt_b = parts[1].strip()
-        return opt_a[0].upper() + opt_a[1:], opt_b[0].upper() + opt_b[1:]
+        opt_a = parts[0].strip().rstrip(",; ")
+        opt_b = parts[1].strip().rstrip("?!. ")
+        if opt_a and opt_b:
+            return opt_a[0].upper() + opt_a[1:], opt_b[0].upper() + opt_b[1:]
+
     return "Option A", "Option B"
-
-
-FALLBACK_QUESTIONS = [
-    {
-        "id": "fallback-1",
-        "text": "Would you rather travel the world for a year with no home base, or build one perfect home and rarely leave it?",
-        "option_a": "Travel the world for a year",
-        "option_b": "Build one perfect home",
-    },
-    {
-        "id": "fallback-2",
-        "text": "Would you rather always know what I'm thinking, or never have to guess a movie's plot again?",
-        "option_a": "Always know what I'm thinking",
-        "option_b": "Never guess a movie's plot",
-    },
-    {
-        "id": "fallback-3",
-        "text": "Would you rather live by the beach or in the mountains?",
-        "option_a": "Live by the beach",
-        "option_b": "Live in the mountains",
-    },
-    {
-        "id": "fallback-4",
-        "text": "Would you rather cook together every night or order in and spend the time elsewhere?",
-        "option_a": "Cook together every night",
-        "option_b": "Order in and relax",
-    },
-    {
-        "id": "fallback-5",
-        "text": "Would you rather have a surprise party or a planned celebration?",
-        "option_a": "Surprise party",
-        "option_b": "Planned celebration",
-    },
-]
 
 
 class WouldYouRather(BaseGame):
@@ -61,7 +32,13 @@ class WouldYouRather(BaseGame):
 
     def new_state(self, payload: dict[str, Any], db: Any = None) -> dict[str, Any]:
         rounds = []
-        if db is not None:
+        session_to_close = None
+        if db is None:
+            from api.db.session import SessionLocal
+            db = SessionLocal()
+            session_to_close = db
+
+        try:
             db_questions = db.scalars(
                 select(Question)
                 .where(Question.category == "would_you_rather", Question.active.is_(True))
@@ -79,11 +56,9 @@ class WouldYouRather(BaseGame):
                     },
                     "picks": {},
                 })
-
-        if not rounds:
-            sample = random.sample(FALLBACK_QUESTIONS, min(5, len(FALLBACK_QUESTIONS)))
-            for q in sample:
-                rounds.append({"q": q, "picks": {}})
+        finally:
+            if session_to_close is not None:
+                session_to_close.close()
 
         return {"rounds": rounds, "current": 0}
 

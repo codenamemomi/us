@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -10,6 +10,7 @@ class CoupleResponse(BaseModel):
     id: UUID
     invite_code: str
     created_at: datetime
+    anniversary_date: date | None = None
 
 
 class PartnerInfo(BaseModel):
@@ -18,10 +19,15 @@ class PartnerInfo(BaseModel):
     email: str
 
 
+class UpdateAnniversaryRequest(BaseModel):
+    anniversary_date: date | None = None
+
+
 class CoupleProfileResponse(BaseModel):
     couple_id: UUID
     invite_code: str
     created_at: datetime
+    anniversary_date: date | None = None
     me: PartnerInfo
     partner: PartnerInfo | None = None
     streak: int
