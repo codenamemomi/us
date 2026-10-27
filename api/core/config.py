@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str | None = None
     CELERY_RESULT_BACKEND: str | None = None
     BACKEND_CORS_ORIGINS: list[str] | str = ["http://localhost:3000"]
+    FRONTEND_URL: str = "http://localhost:3000"
 
     PAYSTACK_SECRET_KEY: str | None = None
     PAYSTACK_PUBLIC_KEY: str | None = None

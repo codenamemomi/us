@@ -23,11 +23,10 @@ def register_user(db: Session, request: RegisterRequest) -> tuple[User, Couple]:
     if couple is None:
         raise InvalidInviteCodeError()
 
-    member_count = db.scalar(
-        select(func.count())
-        .select_from(CoupleMember)
-        .where(CoupleMember.couple_id == couple.id)
-    )
+    existing_members = db.scalars(
+        select(CoupleMember).where(CoupleMember.couple_id == couple.id)
+    ).all()
+    member_count = len(existing_members)
     if member_count >= 2:
         raise CoupleFullError()
 
@@ -51,6 +50,25 @@ def register_user(db: Session, request: RegisterRequest) -> tuple[User, Couple]:
         raise EmailAlreadyRegisteredError() from error
 
     db.refresh(user)
+
+    # ── Sweet welcome / couple complete emails ──────────────────────────────
+    from api.utils.email import (
+        send_async,
+        send_couple_connected_email,
+        send_welcome_account_email,
+    )
+
+    if member_count == 0:
+        # First partner: account created, couple waiting for partner
+        send_async(send_welcome_account_email, user.email, user.name, couple.invite_code)
+    elif member_count == 1:
+        # Second partner registered: couple is now complete!
+        partner_member = existing_members[0]
+        partner_user = db.get(User, partner_member.user_id)
+        if partner_user:
+            send_async(send_couple_connected_email, user.email, user.name, partner_user.name)
+            send_async(send_couple_connected_email, partner_user.email, partner_user.name, user.name)
+
     return user, couple
 
 
